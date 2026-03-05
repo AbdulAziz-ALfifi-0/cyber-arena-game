@@ -1,11 +1,56 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 
 <meta charset="UTF-8">
-<title>Cyber Arena</title>
+<title>Cyber Shooter Arena</title>
 
-<link rel="stylesheet" href="style.css">
+<style>
+
+body{
+margin:0;
+overflow:hidden;
+background:black;
+color:white;
+font-family:Arial;
+}
+
+#ui{
+
+position:absolute;
+top:10px;
+left:10px;
+font-size:18px;
+display:flex;
+gap:20px;
+
+}
+
+#menu{
+
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+
+}
+
+button{
+
+padding:12px 25px;
+font-size:20px;
+cursor:pointer;
+
+}
+
+canvas{
+
+display:block;
+
+}
+
+</style>
 
 </head>
 
@@ -13,30 +58,325 @@
 
 <div id="menu">
 
-<h1>CYBER ARENA</h1>
-
-<button id="startBtn">Start Game</button>
-
-</div>
-
-<div id="hud">
-
-<span>Score: <span id="score">0</span></span>
-<span>Health: <span id="health">100</span></span>
-<span>Level: <span id="level">1</span></span>
-<span>XP: <span id="xp">0</span></span>
+<h1>CYBER SHOOTER</h1>
+<button onclick="startGame()">Start Game</button>
 
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<div id="ui">
 
-<script src="js/game.js"></script>
-<script src="js/player.js"></script>
-<script src="js/enemy.js"></script>
-<script src="js/bullet.js"></script>
-<script src="js/particles.js"></script>
-<script src="js/powerups.js"></script>
-<script src="js/ui.js"></script>
+Score: <span id="score">0</span>
+Health: <span id="health">100</span>
+Level: <span id="level">1</span>
+
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+
+const canvas = document.getElementById("game")
+const ctx = canvas.getContext("2d")
+
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+
+let keys = {}
+
+document.addEventListener("keydown",e=>keys[e.key]=true)
+document.addEventListener("keyup",e=>keys[e.key]=false)
+
+let player
+let bullets=[]
+let enemies=[]
+let particles=[]
+let stars=[]
+
+let score=0
+let health=100
+let level=1
+
+let frame=0
+let running=false
+
+for(let i=0;i<120;i++){
+
+stars.push({
+
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+s:Math.random()*2
+
+})
+
+}
+
+class Player{
+
+constructor(){
+
+this.x=canvas.width/2
+this.y=canvas.height-100
+this.size=40
+this.speed=6
+
+}
+
+draw(){
+
+ctx.fillStyle="cyan"
+ctx.fillRect(this.x,this.y,this.size,this.size)
+
+}
+
+update(){
+
+if(keys["ArrowLeft"]) this.x-=this.speed
+if(keys["ArrowRight"]) this.x+=this.speed
+if(keys["ArrowUp"]) this.y-=this.speed
+if(keys["ArrowDown"]) this.y+=this.speed
+
+if(keys[" "]) shoot()
+
+this.draw()
+
+}
+
+}
+
+class Bullet{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+this.speed=10
+this.size=6
+
+}
+
+draw(){
+
+ctx.fillStyle="yellow"
+ctx.fillRect(this.x,this.y,this.size,this.size)
+
+}
+
+update(){
+
+this.y-=this.speed
+this.draw()
+
+}
+
+}
+
+class Enemy{
+
+constructor(){
+
+this.size=35
+this.x=Math.random()*(canvas.width-this.size)
+this.y=-50
+this.speed=2+level*0.4
+
+}
+
+draw(){
+
+ctx.fillStyle="red"
+ctx.fillRect(this.x,this.y,this.size,this.size)
+
+}
+
+update(){
+
+this.y+=this.speed
+this.draw()
+
+}
+
+}
+
+class Particle{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+this.vx=(Math.random()-0.5)*6
+this.vy=(Math.random()-0.5)*6
+this.life=40
+
+}
+
+draw(){
+
+ctx.fillStyle="orange"
+ctx.fillRect(this.x,this.y,3,3)
+
+}
+
+update(){
+
+this.x+=this.vx
+this.y+=this.vy
+this.life--
+
+this.draw()
+
+}
+
+}
+
+function shoot(){
+
+if(frame%10===0){
+
+bullets.push(new Bullet(player.x+player.size/2,player.y))
+
+}
+
+}
+
+function spawnEnemy(){
+
+if(frame%(90-level*5)===0){
+
+enemies.push(new Enemy())
+
+}
+
+}
+
+function collision(a,b){
+
+return(
+
+a.x<b.x+b.size &&
+a.x+a.size>b.x &&
+a.y<b.y+b.size &&
+a.y+a.size>b.y
+
+)
+
+}
+
+function drawStars(){
+
+ctx.fillStyle="white"
+
+stars.forEach(s=>{
+
+ctx.fillRect(s.x,s.y,s.s,s.s)
+
+s.y+=1
+
+if(s.y>canvas.height){
+
+s.y=0
+
+}
+
+})
+
+}
+
+function updateGame(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+drawStars()
+
+player.update()
+
+spawnEnemy()
+
+bullets.forEach((b,bi)=>{
+
+b.update()
+
+if(b.y<0) bullets.splice(bi,1)
+
+})
+
+enemies.forEach((e,ei)=>{
+
+e.update()
+
+if(e.y>canvas.height){
+
+health-=10
+enemies.splice(ei,1)
+
+}
+
+bullets.forEach((b,bi)=>{
+
+if(collision(b,e)){
+
+score+=10
+
+for(let i=0;i<20;i++){
+
+particles.push(new Particle(e.x,e.y))
+
+}
+
+bullets.splice(bi,1)
+enemies.splice(ei,1)
+
+}
+
+})
+
+})
+
+particles.forEach((p,pi)=>{
+
+p.update()
+
+if(p.life<=0) particles.splice(pi,1)
+
+})
+
+if(score>level*200){
+
+level++
+
+}
+
+document.getElementById("score").textContent=score
+document.getElementById("health").textContent=health
+document.getElementById("level").textContent=level
+
+if(health<=0){
+
+running=false
+alert("Game Over - Score: "+score)
+location.reload()
+
+}
+
+frame++
+
+if(running) requestAnimationFrame(updateGame)
+
+}
+
+function startGame(){
+
+document.getElementById("menu").style.display="none"
+
+player=new Player()
+
+running=true
+
+updateGame()
+
+}
+
+</script>
 
 </body>
 </html>
